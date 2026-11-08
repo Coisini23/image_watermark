@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>图片密铺水印 · 在线批量添加文字水印</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --bg2: #eef0f7;
+    --panel: #ffffff;
+    --line: #e6e8f0;
+    --line-strong: #d6d9e6;
+    --text: #191c26;
+    --muted: #6f7688;
+    --accent: #4f46e5;
+    --accent-soft: #ecebff;
+    --accent-line: #c9c6ff;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(24, 28, 45, .04), 0 8px 24px -12px rgba(24, 28, 45, .18);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(120% 80% at 15% 0%, #ffffff 0%, var(--bg) 42%, var(--bg2) 100%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 18px 28px 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 13px; flex: none;
+    background: linear-gradient(140deg, #6d67f0, #4f46e5 55%, #3f37cc);
+    color: #fff; font-size: 20px; font-weight: 700;
+    display: grid; place-items: center;
+    box-shadow: 0 6px 18px -8px rgba(79, 70, 229, .85);
+    position: relative; overflow: hidden;
+  }
+  .logo::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.35) 0 1px, transparent 1px 7px);
+    opacity: .55;
+  }
+  .brand h1 { font-size: 16.5px; margin: 0; letter-spacing: .2px; font-weight: 650; }
+  .brand p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+  .topbar-actions { display: flex; gap: 8px; }
+
+  /* ---------- layout ---------- */
+  main {
+    display: grid;
+    grid-template-columns: 352px minmax(0, 1fr);
+    gap: 18px;
+    padding: 0 28px 26px;
+    height: calc(100vh - 78px);
+    min-height: 520px;
+  }
+
+  /* ---------- panel ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow-y: auto;
+    padding: 6px 18px 22px;
+  }
+  .group { padding: 16px 0 4px; border-bottom: 1px dashed var(--line); }
+  .group:last-child { border-bottom: 0; }
+  .group > h2 {
+    font-size: 11.5px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 14px; font-weight: 650;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .group > h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 6px; }
+  .label-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 7px; gap: 10px;
+  }
+  label.lbl { font-size: 12.5px; color: #414659; font-weight: 550; }
+  .val {
+    font-variant-numeric: tabular-nums; font-size: 12px; color: var(--accent);
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    padding: 1px 7px; border-radius: 999px; min-width: 46px; text-align: center;
+  }
+
+  input[type="text"], select {
+    width: 100%; height: 38px; padding: 0 11px;
+    border: 1px solid var(--line-strong); border-radius: 10px;
+    background: #fcfcff; color: var(--text); font-size: 13.5px;
+    font-family: inherit; outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  input[type="text"]:focus, select:focus {
+    border-color: var(--accent); background: #fff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+  }
+  select { cursor: pointer; appearance: none; padding-right: 30px;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236f7688' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center;
+  }
+
+  .seg { display: flex; background: #f1f2f8; border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button {
+    flex: 1; height: 30px; border: 0; border-radius: 8px; cursor: pointer;
+    background: transparent; color: var(--muted); font-size: 12.5px; font-family: inherit;
+    font-weight: 550; transition: all .15s;
+  }
+  .seg button.on { background: #fff; color: var(--accent); box-shadow: 0 1px 3px rgba(24,28,45,.14); }
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 22px; background: transparent; margin: 0; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px; border-radius: 99px; background: #e7e8f2;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--accent); margin-top: -5px;
+    box-shadow: 0 1px 4px rgba(24,28,45,.22); transition: transform .12s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
+  input[type="range"]::-moz-range-track { height: 5px; border-radius: 99px; background: #e7e8f2; }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; background: #fff;
+    border: 2px solid var(--accent); box-shadow: 0 1px 4px rgba(24,28,45,.22);
+  }
+  input[type="range"]:disabled { opacity: .4; cursor: not-allowed; }
+
+  .color-row { display: flex; align-items: center; gap: 9px; }
+  .color-row input[type="color"] {
+    width: 42px; height: 38px; padding: 3px; border: 1px solid var(--line-strong);
+    border-radius: 10px; background: #fff; cursor: pointer; flex: none;
+  }
+  .color-row input[type="text"] { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .4px; }
+  .swatches { display: flex; gap: 6px; margin-top: 9px; }
+  .sw {
+    width: 22px; height: 22px; border-radius: 7px; cursor: pointer; padding: 0;
+    border: 1px solid rgba(24,28,45,.16); transition: transform .12s, box-shadow .12s;
+  }
+  .sw:hover { transform: translateY(-1px); box-shadow: 0 3px 8px -3px rgba(24,28,45,.4); }
+
+  .check { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .check input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; margin: 0; }
+  .check span { font-size: 12.5px; color: #414659; }
+
+  .mini-note { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin: 8px 0 0; }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    height: 36px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: #fff; color: #333a4d;
+    font-size: 13px; font-family: inherit; font-weight: 550; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    transition: all .15s;
+  }
+  .btn:hover { border-color: #b9bccd; background: #fafaff; }
+  .btn:active { transform: translateY(.5px); }
+  .btn.primary {
+    background: linear-gradient(180deg, #5b52ea, #4a41dd); border-color: #4138d0;
+    color: #fff; box-shadow: 0 6px 16px -8px rgba(79,70,229,.9);
+  }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.ghost { background: rgba(255,255,255,.7); border-color: transparent; color: var(--muted); }
+  .btn.ghost:hover { background: #fff; color: var(--text); border-color: var(--line); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn svg { width: 15px; height: 15px; }
+
+  /* ---------- stage ---------- */
+  .stage {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  }
+  .stage-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line); flex: none;
+  }
+  .file-info { min-width: 0; }
+  .file-info .name {
+    font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 42vw;
+  }
+  .file-info .meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stage-actions { display: flex; gap: 8px; flex: none; }
+
+  .canvas-wrap {
+    position: relative; flex: 1; min-height: 0; overflow: auto;
+    display: grid; place-items: center; padding: 22px;
+    background-color: #fbfbfe;
+    background-image:
+      linear-gradient(45deg, #f0f1f7 25%, transparent 25%, transparent 75%, #f0f1f7 75%),
+      linear-gradient(45deg, #f0f1f7 25%, transparent 25%, transparent 75%, #f0f1f7 75%);
+    background-size: 18px 18px;
+    background-position: 0 0, 9px 9px;
+  }
+  .canvas-wrap.drag::after {
+    content: "松开鼠标添加图片";
+    position: absolute; inset: 10px; border-radius: 12px;
+    border: 2px dashed var(--accent); background: rgba(79,70,229,.06);
+    display: grid; place-items: center; color: var(--accent);
+    font-weight: 600; font-size: 15px; pointer-events: none;
+  }
+  #preview {
+    max-width: 100%; max-height: 100%;
+    display: none; border-radius: 4px;
+    box-shadow: 0 10px 30px -14px rgba(24,28,45,.45), 0 0 0 1px rgba(24,28,45,.06);
+  }
+  #preview.show { display: block; }
+
+  .empty {
+    display: grid; place-items: center; gap: 4px; text-align: center;
+    padding: 40px 20px; color: var(--muted);
+  }
+  .empty .icon {
+    width: 62px; height: 62px; border-radius: 18px; margin-bottom: 6px;
+    background: #fff; border: 1px solid var(--line); display: grid; place-items: center;
+    box-shadow: var(--shadow); color: var(--accent);
+  }
+  .empty h3 { margin: 0; font-size: 15px; color: #2b3040; font-weight: 600; }
+  .empty p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.7; }
+  .empty .btn { height: 38px; }
+
+  .files {
+    flex: none; border-top: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; overflow-x: auto; background: #fdfdfe;
+  }
+  .files:empty { display: none; }
+  .thumb {
+    position: relative; flex: none; width: 62px; height: 62px; border-radius: 10px;
+    overflow: hidden; cursor: pointer; border: 2px solid transparent;
+    background: #f1f2f8; transition: border-color .15s, transform .15s;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb:hover { transform: translateY(-1px); }
+  .thumb.on { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.14); }
+  .thumb .x {
+    position: absolute; top: 2px; right: 2px; width: 17px; height: 17px; border-radius: 50%;
+    border: 0; background: rgba(15,17,26,.62); color: #fff; font-size: 11px;
+    line-height: 15px; text-align: center; cursor: pointer; padding: 0; opacity: 0;
+    transition: opacity .15s;
+  }
+  .thumb:hover .x { opacity: 1; }
+  .thumb .x:hover { background: #e0453f; }
+  .add-tile {
+    flex: none; width: 62px; height: 62px; border-radius: 10px; cursor: pointer;
+    border: 1.5px dashed var(--line-strong); background: #fff; color: var(--muted);
+    display: grid; place-items: center; font-size: 22px; transition: all .15s;
+  }
+  .add-tile:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .files .count { margin-left: auto; font-size: 12px; color: var(--muted); flex: none; padding-left: 8px; }
+
+  /* ---------- toast / progress ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 14px);
+    background: #191c26; color: #fff; padding: 10px 18px; border-radius: 11px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: all .22s;
+    box-shadow: 0 12px 30px -10px rgba(0,0,0,.5); z-index: 60; max-width: 80vw;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .progress {
+    position: fixed; inset: 0; background: rgba(245,246,250,.72); backdrop-filter: blur(3px);
+    display: none; place-items: center; z-index: 70;
+  }
+  .progress.show { display: grid; }
+  .progress .box {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px 26px; box-shadow: 0 20px 50px -20px rgba(24,28,45,.4);
+    text-align: center; min-width: 260px;
+  }
+  .bar { height: 6px; border-radius: 99px; background: #ecebf5; overflow: hidden; margin-top: 14px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6d67f0, #4f46e5); transition: width .2s; }
+  .progress .txt { font-size: 13px; color: #2b3040; font-weight: 550; }
+  .progress .sub { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+  @media (max-width: 1080px) {
+    main { grid-template-columns: 1fr; height: auto; }
+    .panel { order: 2; max-height: none; }
+    .stage { order: 1; min-height: 62vh; }
+    .canvas-wrap { min-height: 300px; }
+    .file-info .name { max-width: 40vw; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">水</div>
+    <div>
+      <h1>图片密铺水印</h1>
+      <p>按网格平铺文字 · 整体旋转 · 批量导出 —— 全部在本地浏览器完成</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn ghost" id="btnCopyCli">复制命令行</button>
+    <button class="btn ghost" id="btnReset">恢复默认</button>
+  </div>
+</header>
+
+<main>
+  <aside class="panel">
+    <section class="group">
+      <h2>水印内容</h2>
+
+      <div class="field">
+        <div class="label-row"><label class="lbl" for="inText">文字</label></div>
+        <input type="text" id="inText" value="仅供内部使用" placeholder="输入水印文字" />
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <label class="lbl" for="inFont">字体</label>
+          <button class="btn ghost" id="btnFont" style="height:22px;padding:0 8px;font-size:11.5px;color:var(--accent)">上传字体</button>
+        </div>
+        <select id="inFont">
+          <option value='"Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif'>默认中文黑体</option>
+          <option value='"Microsoft YaHei", sans-serif'>微软雅黑</option>
+          <option value='SimHei, "Heiti SC", sans-serif'>黑体</option>
+          <option value='SimSun, "Songti SC", serif'>宋体</option>
+          <option value='"PingFang SC", "Noto Sans CJK SC", sans-serif'>苹方 / 思源黑体</option>
+          <option value='KaiTi, "Kaiti SC", serif'>楷体</option>
+          <option value='Arial, Helvetica, sans-serif'>Arial</option>
+          <option value='Georgia, "Times New Roman", serif'>Georgia</option>
+          <option value='ui-monospace, Menlo, Consolas, monospace'>等宽字体</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">字号</span>
+          <span class="val" id="valSize">5%</span>
+        </div>
+        <div class="seg" id="segSize" style="margin-bottom:9px">
+          <button data-size="auto" class="on">自动（按短边比例）</button>
+          <button data-size="manual">手动像素</button>
+        </div>
+        <input type="range" id="rngFontScale" min="1" max="20" step="0.5" value="5" />
+        <input type="range" id="rngFontSize" min="8" max="400" step="1" value="40" style="display:none" />
+      </div>
+
+      <div class="field">
+        <div class="label-row"><span class="lbl">颜色</span></div>
+        <div class="color-row">
+          <input type="color" id="inColor" value="#ffffff" />
+          <input type="text" id="inColorHex" value="#FFFFFF" spellcheck="false" />
+        </div>
+        <div class="swatches" id="swatches">
+          <button class="sw" data-c="#FFFFFF" style="background:#FFFFFF" title="白"></button>
+          <button class="sw" data-c="#000000" style="background:#000000" title="黑"></button>
+          <button class="sw" data-c="#E4393C" style="background:#E4393C" title="红"></button>
+          <button class="sw" data-c="#8C8C8C" style="background:#8C8C8C" title="灰"></button>
+          <button class="sw" data-c="#F5A623" style="background:#F5A623" title="橙"></button>
+          <button class="sw" data-c="#2F6BE4" style="background:#2F6BE4" title="蓝"></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">不透明度</span>
+          <span class="val" id="valOpacity">25%</span>
+        </div>
+        <input type="range" id="rngOpacity" min="0" max="100" step="1" value="25" />
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>排布方式</h2>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">旋转角度</span>
+          <span class="val" id="valAngle">30°</span>
+        </div>
+        <input type="range" id="rngAngle" min="-180" max="180" step="1" value="30" />
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">横向间距</span>
+          <label class="check"><input type="checkbox" id="gapXAuto" checked /><span>自动</span></label>
+        </div>
+        <input type="range" id="rngGapX" min="-60" max="600" step="2" value="0" disabled />
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">纵向间距</span>
+          <label class="check"><input type="checkbox" id="gapYAuto" checked /><span>自动</span></label>
+        </div>
+        <input type="range" id="rngGapY" min="-60" max="600" step="2" value="0" disabled />
+      </div>
+
+      <div class="field">
+        <label class="check"><input type="checkbox" id="inStagger" checked /><span>错行排列（奇数行偏移半格）</span></label>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>输出</h2>
+
+      <div class="field">
+        <div class="label-row"><label class="lbl" for="inFormat">格式</label></div>
+        <select id="inFormat">
+          <option value="keep">保持原格式</option>
+          <option value="jpeg">JPEG</option>
+          <option value="png">PNG</option>
+          <option value="webp">WebP</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <span class="lbl">输出质量</span>
+          <span class="val" id="valQuality">95</span>
+        </div>
+        <input type="range" id="rngQuality" min="50" max="100" step="1" value="95" />
+      </div>
+
+      <div class="field">
+        <div class="label-row"><label class="lbl" for="inSuffix">文件名后缀</label></div>
+        <input type="text" id="inSuffix" value="_watermarked" spellcheck="false" />
+        <p class="mini-note">输出名：原文件名 + 后缀 + 扩展名。图片不会上传到任何服务器。</p>
+      </div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="stage-bar">
+      <div class="file-info">
+        <div class="name" id="fileName">未选择图片</div>
+        <div class="meta" id="fileMeta">拖入图片即可开始</div>
+      </div>
+      <div class="stage-actions">
+        <button class="btn" id="btnDownload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/></svg>
+          下载当前
+        </button>
+        <button class="btn primary" id="btnZip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M2 8h20"/><path d="M12 2v10"/><path d="M8 6l4-4 4 4"/></svg>
+          打包下载全部
+        </button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="dropZone">
+      <div class="empty" id="emptyState">
+        <div class="icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-4.5-4.5L7 20"/></svg>
+        </div>
+        <h3>把图片拖到这里</h3>
+        <p>支持 JPG / PNG / WebP / BMP / TIFF，可一次拖入多张<br/>也可以直接 Ctrl+V 粘贴剪贴板里的图片</p>
+        <button class="btn primary" id="btnPick">选择图片</button>
+      </div>
+      <canvas id="preview"></canvas>
+    </div>
+
+    <div class="files" id="fileList"></div>
+  </section>
+</main>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden />
+<input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2" hidden />
+<div class="toast" id="toast"></div>
+<div class="progress" id="progress">
+  <div class="box">
+    <div class="txt" id="progText">正在处理…</div>
+    <div class="sub" id="progSub">请稍候</div>
+    <div class="bar"><i id="progBar"></i></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ===================================================================== *
+   * 状态
+   * ===================================================================== */
+  const DEFAULTS = {
+    text: "仅供内部使用",
+    fontFamily: '"Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif',
+    sizeMode: "auto",
+    fontScale: 0.05,
+    fontSize: 40,
+    color: "#FFFFFF",
+    opacity: 0.25,
+    angle: 30,
+    gapXAuto: true,
+    gapYAuto: true,
+    gapX: 0,
+    gapY: 0,
+    stagger: true,
+    format: "keep",
+    quality: 95,
+    suffix: "_watermarked"
+  };
+
+  const opts = Object.assign({}, DEFAULTS);
+  const items = [];          // { id, file, name, stem, ext, url, w, h, bmp }
+  let currentId = null;
+  let renderToken = 0;
+  let customFontName = null;
+
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    text: $("inText"), font: $("inFont"),
+    rngFontScale: $("rngFontScale"), rngFontSize: $("rngFontSize"),
+    color: $("inColor"), colorHex: $("inColorHex"),
+    rngOpacity: $("rngOpacity"),
+    rngAngle: $("rngAngle"),
+    gapXAuto: $("gapXAuto"), rngGapX: $("rngGapX"),
+    gapYAuto: $("gapYAuto"), rngGapY: $("rngGapY"),
+    stagger: $("inStagger"),
+    format: $("inFormat"), rngQuality: $("rngQuality"), suffix: $("inSuffix"),
+    preview: $("preview"), empty: $("emptyState"), dropZone: $("dropZone"),
+    fileList: $("fileList"), fileName: $("fileName"), fileMeta: $("fileMeta"),
+    fileInput: $("fileInput"), fontInput: $("fontInput"),
+    progress: $("progress"), progBar: $("progBar"), progText: $("progText"), progSub: $("progSub"),
+    toast: $("toast")
+  };
+
+  /* ===================================================================== *
+   * 小工具
+   * ===================================================================== */
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  let toastTimer = 0;
+  function toast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2200);
+  }
+
+  function hexToRgb(hex) {
+    let s = String(hex).trim().replace(/^#/, "");
+    if (s.length === 3) s = s.split("").map(c => c + c).join("");
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+    return {
+      r: parseInt(s.slice(0, 2), 16),
+      g: parseInt(s.slice(2, 4), 16),
+      b: parseInt(s.slice(4, 6), 16)
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  const MIME = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+
+  /* ===================================================================== *
+   * 核心：水印绘制
+   * 与 Python 版一致 —— 文字按网格平铺（可错行），整体旋转，
+   * 只是这里用 canvas 变换 + 裁剪代替「正方形画布旋转后裁中心」，
+   * 结果相同但不需要分配超大画布。
+   * ===================================================================== */
+  function drawWatermarkLayer(ctx, W, H, o, s, natW, natH) {
+    const text = o.text;
+    if (!text) return;
+
+    // 字号：按原图短边比例，或手动像素；s 为预览缩放比
+    const shortSide = Math.min(natW, natH);
+    const fsFull = o.sizeMode === "auto"
+      ? Math.max(10, shortSide * o.fontScale)
+      : Math.max(1, o.fontSize);
+    const fs = Math.max(0.8, fsFull * s);
+
+    ctx.save();
+    ctx.font = `400 ${fs.toFixed(2)}px ${o.fontStack}`;
+    ctx.fillStyle = o.color;
+    ctx.globalAlpha = clamp(o.opacity, 0, 1);
+    ctx.textBaseline = "alphabetic";
+
+    const m = ctx.measureText(text);
+    const ascent = m.actualBoundingBoxAscent || fs * 0.8;
+    const descent = m.actualBoundingBoxDescent || fs * 0.2;
+    const tw = Math.max(1, m.width || fs * text.length);
+    const th = Math.max(1, ascent + descent);
+
+    // 间距：自动 = 一个字宽 / 1.6 个字高（同 Python 版）
+    const gapX = o.gapXAuto ? tw : o.gapX * s;
+    const gapY = o.gapYAuto ? th * 1.6 : o.gapY * s;
+    const stepX = Math.max(1, tw + gapX);
+    const stepY = Math.max(1, th + gapY);
+
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-o.angle * Math.PI / 180);   // canvas 顺时针为正，这里翻转成逆时针
+
+    const R = Math.hypot(W, H) / 2 + Math.max(stepX, stepY);
+    let row = 0;
+    let guard = 0;
+
+    for (let y = -R; y < R; y += stepY, row++) {
+      let x0 = -R;
+      if (o.stagger && (row & 1)) x0 -= stepX / 2;
+      for (let x = x0; x < R; x += stepX) {
+        ctx.fillText(text, x, y + ascent);
+        if (++guard > 500000) { ctx.restore(); return; }
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ===================================================================== *
+   * 图片读取
+   * ===================================================================== */
+  async function decodeImage(file) {
+    try {
+      return await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch (e) {
+      try { return await createImageBitmap(file); }
+      catch (e2) {
+        // 兜底：走 <img>（部分浏览器对 TIFF 等格式支持有限）
+        return await new Promise((res, rej) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => { URL.revokeObjectURL(url); res(img); };
+          img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("无法解码该图片")); };
+          img.src = url;
+        });
+      }
+    }
+  }
+
+  function uniqueName(name, used) {
+    if (!used.has(name)) { used.add(name); return name; }
+    const dot = name.lastIndexOf(".");
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext = dot > 0 ? name.slice(dot) : "";
+    let i = 1;
+    let cand = `${base} (${i})${ext}`;
+    while (used.has(cand)) { i++; cand = `${base} (${i})${ext}`; }
+    used.add(cand);
+    return cand;
+  }
+
+  function outFormat(item) {
+    if (opts.format === "keep") {
+      const ext = item.ext;
+      if (MIME[ext]) return { ext: ext === "jpeg" ? "jpeg" : ext, mime: MIME[ext] };
+      return { ext: "png", mime: "image/png" };
+    }
+    if (opts.format === "jpeg") return { ext: "jpg", mime: "image/jpeg" };
+    if (opts.format === "webp") return { ext: "webp", mime: "image/webp" };
+    return { ext: "png", mime: "image/png" };
+  }
+
+  function renderFull(item) {
+    return new Promise((resolve, reject) => {
+      const bmp = item.bmp;
+      const w = item.w, h = item.h;
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      const fmt = outFormat(item);
+      if (fmt.mime === "image/jpeg") {
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, w, h);
+      }
+      ctx.drawImage(bmp, 0, 0, w, h);
+      drawWatermarkLayer(ctx, w, h, buildDrawOpts(), 1, w, h);
+      const quality = clamp(opts.quality, 50, 100) / 100;
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error("导出失败"));
+        resolve({ blob, ext: fmt.ext, mime: fmt.mime });
+      }, fmt.mime, fmt.mime === "image/png" ? undefined : quality);
+    });
+  }
+
+  function buildDrawOpts() {
+    return {
+      text: opts.text,
+      fontStack: opts.fontFamily === "__custom__"
+        ? `"${customFontName || "sans-serif"}", sans-serif`
+        : opts.fontFamily,
+      sizeMode: opts.sizeMode,
+      fontScale: opts.fontScale,
+      fontSize: opts.fontSize,
+      color: opts.color,
+      opacity: opts.opacity,
+      angle: opts.angle,
+      gapXAuto: opts.gapXAuto,
+      gapYAuto: opts.gapYAuto,
+      gapX: opts.gapX,
+      gapY: opts.gapY,
+      stagger: opts.stagger
+    };
+  }
+
+  /* ===================================================================== *
+   * 预览
+   * ===================================================================== */
+  async function getBitmap(item) {
+    if (item.bmp) return item.bmp;
+    const bmp = await decodeImage(item.file);
+    item.bmp = bmp;
+    item.w = bmp.width;
+    item.h = bmp.height;
+    return bmp;
+  }
+
+  function currentItem() {
+    return items.find(i => i.id === currentId) || null;
+  }
+
+  async function renderPreview() {
+    const item = currentItem();
+    const token = ++renderToken;
+
+    if (!item) {
+      el.preview.classList.remove("show");
+      el.empty.style.display = "grid";
+      el.fileName.textContent = "未选择图片";
+      el.fileMeta.textContent = "拖入图片即可开始";
+      return;
+    }
+    el.empty.style.display = "none";
+
+    let bmp;
+    try {
+      bmp = await getBitmap(item);
+    } catch (e) {
+      toast("这张图片无法解码，已跳过");
+      removeItem(item.id);
+      return;
+    }
+    if (token !== renderToken) return;
+
+    const w = item.w, h = item.h;
+    // 预览按最长边 1500px 渲染，再靠 CSS 缩放，保证大图也流畅
+    const s = Math.min(1, 1500 / Math.max(w, h));
+    const pw = Math.max(1, Math.round(w * s));
+    const ph = Math.max(1, Math.round(h * s));
+
+    el.preview.width = pw;
+    el.preview.height = ph;
+    const ctx = el.preview.getContext("2d");
+    ctx.clearRect(0, 0, pw, ph);
+    ctx.drawImage(bmp, 0, 0, pw, ph);
+    drawWatermarkLayer(ctx, pw, ph, buildDrawOpts(), s, w, h);
+    el.preview.classList.add("show");
+
+    el.fileName.textContent = item.name;
+    el.fileMeta.textContent =
+      `${w} × ${h} px · ${fmtBytes(item.file.size)} · 共 ${items.length} 张`;
+  }
+
+  let previewRaf = 0;
+  function schedulePreview() {
+    cancelAnimationFrame(previewRaf);
+    previewRaf = requestAnimationFrame(() => { renderPreview(); });
+  }
+
+  /* ===================================================================== *
+   * 文件列表
+   * ===================================================================== */
+  function addFiles(fileList) {
+    const files = Array.from(fileList).filter(f =>
+      f.type.startsWith("image/") || /\.(jpe?g|png|bmp|webp|tiff?)$/i.test(f.name)
+    );
+    if (!files.length) { toast("没有找到可处理的图片"); return; }
+
+    const firstNew = [];
+    for (const file of files) {
+      const dot = file.name.lastIndexOf(".");
+      const ext = dot > 0 ? file.name.slice(dot + 1).toLowerCase() : "";
+      const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
+      const item = {
+        id: "f" + Math.random().toString(36).slice(2, 9),
+        file,
+        name: file.name,
+        stem,
+        ext,
+        url: URL.createObjectURL(file),
+        w: 0, h: 0, bmp: null
+      };
+      items.push(item);
+      if (!firstNew.length) firstNew.push(item);
+    }
+    if (!currentId) currentId = firstNew[0].id;
+    renderFileList();
+    schedulePreview();
+  }
+
+  function removeItem(id) {
+    const idx = items.findIndex(i => i.id === id);
+    if (idx < 0) return;
+    const [it] = items.splice(idx, 1);
+    if (it.bmp && it.bmp.close) it.bmp.close();
+    URL.revokeObjectURL(it.url);
+    if (currentId === id) currentId = items.length ? items[Math.min(idx, items.length - 1)].id : null;
+    renderFileList();
+    schedulePreview();
+  }
+
+  function renderFileList() {
+    const box = el.fileList;
+    box.innerHTML = "";
+    if (!items.length) return;
+
+    items.forEach(item => {
+      const d = document.createElement("div");
+      d.className = "thumb" + (item.id === currentId ? " on" : "");
+      d.title = item.name;
+      d.innerHTML = `<img src="${item.url}" alt="" draggable="false" />`;
+
+      const x = document.createElement("button");
+      x.className = "x";
+      x.type = "button";
+      x.textContent = "×";
+      x.title = "移除";
+      x.addEventListener("click", (e) => { e.stopPropagation(); removeItem(item.id); });
+      d.appendChild(x);
+
+      d.addEventListener("click", () => { currentId = item.id; renderFileList(); schedulePreview(); });
+      box.appendChild(d);
+    });
+
+    const add = document.createElement("button");
+    add.className = "add-tile";
+    add.type = "button";
+    add.textContent = "+";
+    add.title = "继续添加图片";
+    add.addEventListener("click", () => el.fileInput.click());
+    box.appendChild(add);
+
+    const count = document.createElement("div");
+    count.className = "count";
+    count.textContent = `共 ${items.length} 张`;
+    box.appendChild(count);
+  }
+
+  /* ===================================================================== *
+   * 下载 / 打包
+   * ===================================================================== */
+  function saveBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  async function downloadCurrent() {
+    const item = currentItem();
+    if (!item) { toast("请先选择一张图片"); return; }
+    if (!opts.text.trim()) { toast("水印文字不能为空"); return; }
+
+    showProgress("正在生成图片…", item.name, 0);
+    try {
+      await getBitmap(item);
+      const { blob, ext } = await renderFull(item);
+      const name = `${item.stem}${opts.suffix}${"." + ext}`;
+      saveBlob(blob, name);
+      hideProgress();
+      toast("已生成 " + name);
+    } catch (e) {
+      hideProgress();
+      toast("生成失败：" + e.message);
+    }
+  }
+
+  async function downloadAll() {
+    if (!items.length) { toast("请先添加图片"); return; }
+    if (!opts.text.trim()) { toast("水印文字不能为空"); return; }
+
+    const used = new Set();
+    const entries = [];
+    showProgress("正在处理…", `0 / ${items.length}`, 0);
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      el.progress.querySelector(".txt").textContent = "正在处理…";
+      el.progSub.textContent = `${i + 1} / ${items.length} · ${item.name}`;
+      el.progBar.style.width = ((i / items.length) * 92).toFixed(1) + "%";
+      try {
+        await getBitmap(item);
+        const { blob, ext } = await renderFull(item);
+        const name = uniqueName(`${item.stem}${opts.suffix}.${ext}`, used);
+        entries.push({ name, blob, data: null });
+      } catch (e) {
+        console.warn("处理失败", item.name, e);
+      }
+    }
+
+    if (!entries.length) { hideProgress(); toast("没有图片处理成功"); return; }
+
+    el.progress.querySelector(".txt").textContent = "正在打包…";
+    el.progBar.style.width = "96%";
+
+    try {
+      const zipBlob = await makeZip(entries);
+      const stamp = new Date();
+      const d = `${stamp.getFullYear()}${String(stamp.getMonth() + 1).padStart(2, "0")}${String(stamp.getDate()).padStart(2, "0")}`;
+      saveBlob(zipBlob, `watermarked_${d}_${entries.length}.zip`);
+      hideProgress();
+      toast(`已打包 ${entries.length} 张图片`);
+    } catch (e) {
+      hideProgress();
+      toast("打包失败：" + e.message);
+    }
+  }
+
+  function showProgress(title, sub, pct) {
+    el.progText.textContent = title;
+    el.progSub.textContent = sub || "";
+    el.progBar.style.width = (pct || 0) + "%";
+    el.progress.classList.add("show");
+  }
+  function hideProgress() {
+    el.progress.classList.remove("show");
+    el.progBar.style.width = "0%";
+  }
+
+  /* ---------- 极简 ZIP（store 模式，无压缩） ---------- */
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(buf) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  async function makeZip(entries) {
+    const enc = new TextEncoder();
+    const parts = [];
+    const central = [];
+    let offset = 0;
+
+    const dosTime = 0;
+    const now = new Date();
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+    for (const e of entries) {
+      const data = new Uint8Array(await e.blob.arrayBuffer());
+      const nameBytes = enc.encode(e.name);
+      const crc = crc32(data);
+
+      const local = new Uint8Array(30 + nameBytes.length);
+      const lv = new DataView(local.buffer);
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(4, 20, true);
+      lv.setUint16(6, 0x0800, true);      // UTF-8 文件名
+      lv.setUint16(8, 0, true);           // store
+      lv.setUint16(10, dosTime, true);
+      lv.setUint16(12, dosDate, true);
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, data.length, true);
+      lv.setUint32(22, data.length, true);
+      lv.setUint16(26, nameBytes.length, true);
+      lv.setUint16(28, 0, true);
+      local.set(nameBytes, 30);
+      parts.push(local, data);
+
+      const cd = new Uint8Array(46 + nameBytes.length);
+      const cv = new DataView(cd.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
+      cv.setUint16(8, 0x0800, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint16(12, dosTime, true);
+      cv.setUint16(14, dosDate, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, data.length, true);
+      cv.setUint32(24, data.length, true);
+      cv.setUint16(28, nameBytes.length, true);
+      cv.setUint32(42, offset, true);
+      cd.set(nameBytes, 46);
+      central.push(cd);
+
+      offset += local.length + data.length;
+    }
+
+    let cdSize = 0;
+    for (const c of central) cdSize += c.length;
+
+    const eocd = new Uint8Array(22);
+    const ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, central.length, true);
+    ev.setUint16(10, central.length, true);
+    ev.setUint32(12, cdSize, true);
+    ev.setUint32(16, offset, true);
+
+    return new Blob([...parts, ...central, eocd], { type: "application/zip" });
+  }
+
+  /* ===================================================================== *
+   * 表单同步
+   * ===================================================================== */
+  function syncUI() {
+    el.text.value = opts.text;
+    el.font.value = opts.fontFamily;
+    if (opts.fontFamily === "__custom__") {
+      // 自定义字体项可能已被重建，靠下面 ensureCustomOption 补
+      ensureCustomOption();
+    }
+    document.querySelectorAll("#segSize button").forEach(b => {
+      b.classList.toggle("on", b.dataset.size === opts.sizeMode);
+    });
+    el.rngFontScale.style.display = opts.sizeMode === "auto" ? "" : "none";
+    el.rngFontSize.style.display = opts.sizeMode === "auto" ? "none" : "";
+    el.rngFontScale.value = opts.fontScale * 100;
+    el.rngFontSize.value = opts.fontSize;
+    $("valSize").textContent = opts.sizeMode === "auto"
+      ? (opts.fontScale * 100).toFixed(1).replace(/\.0$/, "") + "%"
+      : Math.round(opts.fontSize) + "px";
+
+    el.color.value = opts.color.toLowerCase();
+    el.colorHex.value = opts.color.toUpperCase();
+
+    el.rngOpacity.value = Math.round(opts.opacity * 100);
+    $("valOpacity").textContent = Math.round(opts.opacity * 100) + "%";
+
+    el.rngAngle.value = opts.angle;
+    $("valAngle").textContent = Math.round(opts.angle) + "°";
+
+    el.gapXAuto.checked = opts.gapXAuto;
+    el.rngGapX.disabled = opts.gapXAuto;
+    el.rngGapX.value = opts.gapX;
+    el.gapYAuto.checked = opts.gapYAuto;
+    el.rngGapY.disabled = opts.gapYAuto;
+    el.rngGapY.value = opts.gapY;
+
+    el.stagger.checked = opts.stagger;
+    el.format.value = opts.format;
+    el.rngQuality.value = opts.quality;
+    $("valQuality").textContent = opts.quality;
+    el.suffix.value = opts.suffix;
+
+    updateQualityState();
+  }
+
+  function updateQualityState() {
+    const fmt = opts.format === "keep" ? "keep" : opts.format;
+    const disabled = fmt === "png";
+    el.rngQuality.disabled = disabled;
+    el.rngQuality.style.opacity = disabled ? .4 : 1;
+  }
+
+  function ensureCustomOption() {
+    let o = el.font.querySelector('option[value="__custom__"]');
+    if (!o) {
+      o = document.createElement("option");
+      o.value = "__custom__";
+      el.font.appendChild(o);
+    }
+    o.textContent = "自定义字体（已上传）";
+    el.font.value = "__custom__";
+  }
+
+  /* ===================================================================== *
+   * 事件绑定
+   * ===================================================================== */
+  el.text.addEventListener("input", () => { opts.text = el.text.value; schedulePreview(); });
+
+  el.font.addEventListener("change", () => { opts.fontFamily = el.font.value; schedulePreview(); });
+
+  document.querySelectorAll("#segSize button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      opts.sizeMode = btn.dataset.size;
+      syncUI();
+      schedulePreview();
+    });
+  });
+
+  el.rngFontScale.addEventListener("input", () => {
+    opts.fontScale = parseFloat(el.rngFontScale.value) / 100;
+    $("valSize").textContent = (opts.fontScale * 100).toFixed(1).replace(/\.0$/, "") + "%";
+    schedulePreview();
+  });
+
+  el.rngFontSize.addEventListener("input", () => {
+    opts.fontSize = parseInt(el.rngFontSize.value, 10);
+    $("valSize").textContent = opts.fontSize + "px";
+    schedulePreview();
+  });
+
+  el.color.addEventListener("input", () => {
+    opts.color = el.color.value.toUpperCase();
+    el.colorHex.value = opts.color;
+    schedulePreview();
+  });
+
+  el.colorHex.addEventListener("change", () => {
+    const rgb = hexToRgb(el.colorHex.value);
+    if (!rgb) { toast("颜色格式应为 #RRGGBB"); el.colorHex.value = opts.color; return; }
+    opts.color = rgbToHex(rgb.r, rgb.g, rgb.b);
+    el.color.value = opts.color.toLowerCase();
+    el.colorHex.value = opts.color;
+    schedulePreview();
+  });
+
+  $("swatches").addEventListener("click", (e) => {
+    const b = e.target.closest(".sw");
+    if (!b) return;
+    opts.color = b.dataset.c.toUpperCase();
+    el.color.value = opts.color.toLowerCase();
+    el.colorHex.value = opts.color;
+    schedulePreview();
+  });
+
+  el.rngOpacity.addEventListener("input", () => {
+    opts.opacity = parseInt(el.rngOpacity.value, 10) / 100;
+    $("valOpacity").textContent = Math.round(opts.opacity * 100) + "%";
+    schedulePreview();
+  });
+
+  el.rngAngle.addEventListener("input", () => {
+    opts.angle = parseFloat(el.rngAngle.value);
+    $("valAngle").textContent = Math.round(opts.angle) + "°";
+    schedulePreview();
+  });
+
+  el.gapXAuto.addEventListener("change", () => {
+    opts.gapXAuto = el.gapXAuto.checked;
+    el.rngGapX.disabled = opts.gapXAuto;
+    schedulePreview();
+  });
+  el.rngGapX.addEventListener("input", () => {
+    opts.gapX = parseInt(el.rngGapX.value, 10);
+    schedulePreview();
+  });
+  el.gapYAuto.addEventListener("change", () => {
+    opts.gapYAuto = el.gapYAuto.checked;
+    el.rngGapY.disabled = opts.gapYAuto;
+    schedulePreview();
+  });
+  el.rngGapY.addEventListener("input", () => {
+    opts.gapY = parseInt(el.rngGapY.value, 10);
+    schedulePreview();
+  });
+
+  el.stagger.addEventListener("change", () => {
+    opts.stagger = el.stagger.checked;
+    schedulePreview();
+  });
+
+  el.format.addEventListener("change", () => {
+    opts.format = el.format.value;
+    updateQualityState();
+  });
+  el.rngQuality.addEventListener("input", () => {
+    opts.quality = parseInt(el.rngQuality.value, 10);
+    $("valQuality").textContent = opts.quality;
+  });
+  el.suffix.addEventListener("input", () => {
+    opts.suffix = el.suffix.value.replace(/[\\/:*?"<>|]/g, "");
+  });
+
+  /* ---------- 文件选择 / 拖拽 / 粘贴 ---------- */
+  $("btnPick").addEventListener("click", () => el.fileInput.click());
+  el.fileInput.addEventListener("change", () => {
+    if (el.fileInput.files.length) addFiles(el.fileInput.files);
+    el.fileInput.value = "";
+  });
+
+  let dragDepth = 0;
+  el.dropZone.addEventListener("dragenter", (e) => {
+    e.preventDefault(); dragDepth++; el.dropZone.classList.add("drag");
+  });
+  el.dropZone.addEventListener("dragover", (e) => { e.preventDefault(); });
+  el.dropZone.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    if (--dragDepth <= 0) { dragDepth = 0; el.dropZone.classList.remove("drag"); }
+  });
+  el.dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    el.dropZone.classList.remove("drag");
+    if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
+
+  window.addEventListener("paste", (e) => {
+    if (!e.clipboardData) return;
+    const files = Array.from(e.clipboardData.files || []);
+    if (files.length) { addFiles(files); return; }
+    const clipItems = Array.from(e.clipboardData.items || []);
+    const imgs = clipItems.filter(i => i.type.startsWith("image/")).map(i => i.getAsFile()).filter(Boolean);
+    if (imgs.length) addFiles(imgs);
+  });
+
+  /* ---------- 字体上传 ---------- */
+  $("btnFont").addEventListener("click", () => el.fontInput.click());
+  el.fontInput.addEventListener("change", async () => {
+    const f = el.fontInput.files[0];
+    el.fontInput.value = "";
+    if (!f) return;
+    if (/\.ttc$/i.test(f.name)) { toast("浏览器不支持 .ttc 集合字体，请上传 .ttf / .otf"); return; }
+    try {
+      const buf = await f.arrayBuffer();
+      customFontName = "CustomFont" + Date.now().toString(36);
+      const face = new FontFace(customFontName, buf);
+      await face.load();
+      document.fonts.add(face);
+      ensureCustomOption();
+      opts.fontFamily = "__custom__";
+      schedulePreview();
+      toast("字体已加载：" + f.name);
+    } catch (e) {
+      toast("字体加载失败，可能格式不受支持");
+    }
+  });
+
+  /* ---------- 按钮 ---------- */
+  $("btnDownload").addEventListener("click", downloadCurrent);
+  $("btnZip").addEventListener("click", downloadAll);
+
+  $("btnReset").addEventListener("click", () => {
+    Object.assign(opts, DEFAULTS);
+    if (customFontName) {
+      // 保留已上传字体，但默认回到系统字体
+    }
+    syncUI();
+    schedulePreview();
+    toast("已恢复默认参数");
+  });
+
+  $("btnCopyCli").addEventListener("click", async () => {
+    const parts = [
+      "python image_watermark.py photo.jpg",
+      `-t "${opts.text}"`,
+      `-c "${opts.color}"`,
+      `-a ${clamp(opts.opacity, 0, 1).toFixed(2)}`,
+      `--angle ${Math.round(opts.angle)}`
+    ];
+    if (opts.sizeMode === "auto") parts.push(`--font-scale ${opts.fontScale.toFixed(3)}`);
+    else parts.push(`--font-size ${Math.round(opts.fontSize)}`);
+    if (!opts.gapXAuto) parts.push(`--gap-x ${opts.gapX}`);
+    if (!opts.gapYAuto) parts.push(`--gap-y ${opts.gapY}`);
+    if (!opts.stagger) parts.push("--no-stagger");
+    const cmd = parts.join(" ");
+    try {
+      await navigator.clipboard.writeText(cmd);
+      toast("命令行已复制到剪贴板");
+    } catch (e) {
+      toast("复制失败，请手动选择文本");
+    }
+  });
+
+  /* ===================================================================== *
+   * 初始化
+   * ===================================================================== */
+  syncUI();
+  renderPreview();
+  document.fonts && document.fonts.ready.then(() => schedulePreview());
+})();
+</script>
+</body>
+</html>
